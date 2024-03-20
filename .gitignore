@@ -1,0 +1,5 @@
+node_modules/
+dist/
+
+datetime.txt
+.DS_Store
