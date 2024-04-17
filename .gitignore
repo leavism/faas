@@ -1,6 +1,11 @@
+# Development environment
 node_modules/
 dist/
 .env
 
+# Mac
 datetime.txt
 .DS_Store
+
+# Redis
+*.rdb

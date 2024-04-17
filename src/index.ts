@@ -4,6 +4,10 @@ import path from "path";
 import simpleGit from "simple-git";
 import { generate, getAllFiles } from "./utils";
 import { uploadFile } from "./aws";
+import { createClient } from "redis";
+
+const publisher = createClient();
+publisher.connect();
 
 const app = express();
 app.use(cors());
@@ -20,6 +24,8 @@ app.post("/deploy", async (req, res) => {
   files.forEach(async (file) => {
     await uploadFile(file.slice(__dirname.length + 1), file);
   });
+
+  publisher.lPush("build-queue", id);
 
   res.json({
     id: id,
