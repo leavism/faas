@@ -39,3 +39,41 @@ export async function downloadS3Folder(pathPrefix: string) {
 
   await Promise.all(allPromises?.filter((x) => x !== undefined));
 }
+
+export function uploadBuild(id: string) {
+  const folderPath = path.join(__dirname, `output/${id}/dist`);
+  const allfiles = getAllfiles(folderPath);
+
+  allfiles.forEach((file) => {
+    uploadFile(`dist/${id}/` + file.slice(folderPath.length + 1), file);
+  });
+}
+
+const getAllfiles = (folderPath: string) => {
+  let response: string[] = [];
+
+  const allFilesAndFolders = fs.readdirSync(folderPath);
+
+  allFilesAndFolders.forEach((file) => {
+    const fullFilePath = path.join(folderPath, file);
+    if (fs.statSync(fullFilePath).isDirectory()) {
+      response = response.concat(getAllfiles(fullFilePath));
+    } else {
+      response.push(fullFilePath);
+    }
+  });
+  return response;
+};
+
+const uploadFile = async (fileName: string, localFilePath: string) => {
+  const fileContent = fs.readFileSync(localFilePath);
+  const response = await s3
+    .upload({
+      Body: fileContent,
+      Bucket: "faas-concept",
+      Key: fileName,
+    })
+    .promise();
+
+  console.log(response);
+};
