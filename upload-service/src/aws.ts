@@ -6,15 +6,12 @@ const s3 = new S3({
   secretAccessKey: process.env.SECRET_ACCESS_KEY,
 });
 
-export const uploadFile = async (fileName: string, filePath: string) => {
-  const fileContent = fs.readFileSync(filePath);
-  const response = await s3
-    .upload({
-      Body: fileContent,
-      Bucket: "faas-concept",
-      Key: fileName,
-    })
-    .promise();
-
-  console.log(response);
-};
+export async function uploadFile(fileName: string, localFilePath: string) {
+  const fileStream = fs.createReadStream(localFilePath);
+  const params = {
+    Bucket: 'faas-concept',
+    Key: fileName,
+    Body: fileStream
+  }
+  return s3.upload(params).promise();
+}

@@ -21,10 +21,11 @@ app.post("/deploy", async (req, res) => {
   await simpleGit().clone(repoUrl, path.join(__dirname, outputPath));
 
   let files = getAllFiles(path.join(__dirname, outputPath));
-  files.forEach(async (file) => {
+  for (const file of files) {
+    console.log(`Uploading: ${file}`)
     await uploadFile(file.slice(__dirname.length + 1), file);
-  });
-
+  }
+  
   publisher.lPush("build-queue", id);
 
   res.json({
