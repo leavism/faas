@@ -7,73 +7,82 @@ const s3 = new S3({
   secretAccessKey: process.env.SECRET_ACCESS_KEY,
 });
 
-export async function downloadS3Folder(pathPrefix: string) {
-  const allFiles = await s3
-    .listObjectsV2({ Bucket: "faas-concept", Prefix: pathPrefix })
-    .promise();
+export async function downloadS3Folder(s3Path: string) {
+  const files = await listS3Files(s3Path);
+  if (files.length === 0) {
+    console.log('No files found in specified path.');
+    return;
+  }
 
-  const allPromises =
-    allFiles.Contents?.map(async ({ Key }) => {
-      return new Promise(async (resolve) => {
-        if (!Key) {
-          resolve("");
-          return;
-        }
+  for (const file of files) {
+    const key = file.Key
+    if (!key) {
+      return;
+    }
+    const downloadPath = path.join(__dirname, key)
+    const dirName = path.dirname(downloadPath)
+    if(!fs.existsSync(dirName)) {
+      fs.mkdirSync(dirName, {recursive: true})
+    }
 
-        const finalOutputPath = path.join(__dirname, Key);
-        const outputFile = fs.createWriteStream(finalOutputPath);
-        const dirName = path.dirname(finalOutputPath);
-        if (!fs.existsSync(dirName)) {
-          fs.mkdirSync(dirName, { recursive: true });
-        }
-
-        s3.getObject({ Bucket: "faas-concept", Key })
-          .createReadStream()
-          .pipe(outputFile)
-          .on("finish", () => {
-            resolve("");
-          });
-      });
-    }) || [];
-  console.log("awaiting");
-
-  await Promise.all(allPromises?.filter((x) => x !== undefined));
+    await downloadFile(key, downloadPath)
+  }
 }
 
-export function uploadBuild(id: string) {
-  const folderPath = path.join(__dirname, `output/${id}/dist`);
-  const allfiles = getAllfiles(folderPath);
+const downloadFile = (key: string, outputPath: string) => {
+  return new Promise((resolve, reject) => {
+    const params = { Bucket: 'faas-concept', Key: key };
+    const fileStream = fs.createWriteStream(outputPath);
 
-  allfiles.forEach((file) => {
-    uploadFile(`dist/${id}/` + file.slice(folderPath.length + 1), file);
-  });
+    s3.getObject(params).createReadStream()
+      .on('error', reject)
+      .pipe(fileStream)
+      .on('error', reject)
+      .on('close', resolve)
+  })
 }
 
-const getAllfiles = (folderPath: string) => {
+const listS3Files = async(s3Path: string) => {
+  const params = {
+    Bucket: 'faas-concept',
+    Prefix: s3Path
+  };
+
+  const response = await s3.listObjectsV2(params).promise();
+  return response.Contents || [];
+}
+
+export async function uploadBuild(id: string) {
+  const folderPath = path.join(__dirname, `output/${id}/.next`);
+  const files = getAllFiles(folderPath);
+
+  for (const file of files) {
+    await uploadFile(`dist/${id}/` + file.slice(folderPath.length + 1), file);
+  }
+  
+}
+
+const getAllFiles = (folderPath: string) => {
   let response: string[] = [];
 
   const allFilesAndFolders = fs.readdirSync(folderPath);
-
-  allFilesAndFolders.forEach((file) => {
+  allFilesAndFolders.forEach(file => {
     const fullFilePath = path.join(folderPath, file);
     if (fs.statSync(fullFilePath).isDirectory()) {
-      response = response.concat(getAllfiles(fullFilePath));
+      response = response.concat(getAllFiles(fullFilePath))
     } else {
       response.push(fullFilePath);
     }
   });
   return response;
-};
+}
 
 const uploadFile = async (fileName: string, localFilePath: string) => {
-  const fileContent = fs.readFileSync(localFilePath);
-  const response = await s3
-    .upload({
-      Body: fileContent,
-      Bucket: "faas-concept",
-      Key: fileName,
-    })
-    .promise();
-
-  console.log(response);
+  const fileStream = fs.createReadStream(localFilePath);
+  const params = {
+    Bucket: 'faas-concept',
+    Key: fileName,
+    Body: fileStream
+  }
+  return s3.upload(params).promise();
 };
