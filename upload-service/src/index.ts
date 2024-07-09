@@ -6,7 +6,10 @@ import { generate, getAllFiles } from "./utils";
 import { uploadFile } from "./aws";
 import { createClient } from "redis";
 
-const publisher = createClient();
+const redisParams = {
+  url: `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`
+}
+const publisher = createClient(redisParams);
 publisher.connect();
 
 const app = express();
