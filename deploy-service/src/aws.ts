@@ -53,10 +53,11 @@ const listS3Files = async(s3Path: string) => {
 }
 
 export async function uploadBuild(id: string) {
-  const folderPath = path.join(__dirname, `output/${id}/.next`);
+  const folderPath = path.join(__dirname, `output/${id}/out`);
   const files = getAllFiles(folderPath);
 
   for (const file of files) {
+    console.log(`Uploading: ${file}`)
     await uploadFile(`dist/${id}/` + file.slice(folderPath.length + 1), file);
   }
   
@@ -79,10 +80,20 @@ const getAllFiles = (folderPath: string) => {
 
 const uploadFile = async (fileName: string, localFilePath: string) => {
   const fileStream = fs.createReadStream(localFilePath);
-  const params = {
+  
+  const isSVG = path.extname(fileName).toLowerCase() === '.svg';
+
+  const params = isSVG ? {
+    Bucket: 'faas-concept',
+    Key: fileName,
+    Body: fileStream,
+    ACL: 'public-read',
+    ContentType: 'image/svg+xml'
+  } : {
     Bucket: 'faas-concept',
     Key: fileName,
     Body: fileStream
-  }
+  };
+
   return s3.upload(params).promise();
 };
