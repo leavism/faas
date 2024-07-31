@@ -1,0 +1,19 @@
+{
+  "name": "handler-service",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc -b",
+    "dev": "tsc -b && node --env-file=.env dist/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@types/express": "^4.17.21",
+    "aws-sdk": "^2.1665.0",
+    "express": "^4.19.2",
+    "typescript": "^5.5.4"
+  }
+}
